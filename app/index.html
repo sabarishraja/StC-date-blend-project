@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StC Data Platform</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>StC Data Platform</h1>
+      <p class="subtitle">Ask a question about your analytics data</p>
+    </header>
+
+    <div class="input-area">
+      <textarea id="question" rows="3"
+        placeholder="e.g. What are our top content gaps? What do users search for with no results?"></textarea>
+      <button id="ask-btn" onclick="askQuestion()">Ask</button>
+    </div>
+
+    <div id="status" class="status hidden"></div>
+
+    <div id="result" class="result hidden">
+      <div id="answer" class="answer"></div>
+      <details class="sql-details">
+        <summary>View SQL</summary>
+        <pre id="sql-output"></pre>
+      </details>
+    </div>
+
+    <div class="examples">
+      <p>Example questions:</p>
+      <ul>
+        <li onclick="setQuestion(this)">What are our top content gaps — searches with no results?</li>
+        <li onclick="setQuestion(this)">Which pages have the highest organic impressions but lowest clicks?</li>
+        <li onclick="setQuestion(this)">What are the most searched terms that also appear in Google Search Console?</li>
+        <li onclick="setQuestion(this)">Which resources are evergreen — consistently popular over the last 90 days?</li>
+        <li onclick="setQuestion(this)">Where do users from the US mostly land on the site?</li>
+      </ul>
+    </div>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>
