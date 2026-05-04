@@ -1,7 +1,4 @@
 # tests/test_sync_meilisearch.py
-from unittest.mock import MagicMock, patch
-import pytest
-from datetime import date
 
 def test_build_top_search_records():
     from sync.sync_meilisearch import build_top_search_records
