@@ -1,4 +1,5 @@
 .env
+env
 ga4-credentials.json
 __pycache__/
 *.pyc
