@@ -4,6 +4,8 @@ import sys
 from datetime import date, timedelta
 from google.analytics.data_v1beta import BetaAnalyticsDataClient
 from google.analytics.data_v1beta.types import DateRange, Dimension, Metric, RunReportRequest
+from google.oauth2.credentials import Credentials
+from google.auth.transport.requests import Request
 from supabase import create_client
 from dotenv import load_dotenv
 
@@ -12,9 +14,9 @@ load_dotenv()
 SUPABASE_URL = os.environ["SUPABASE_URL"]
 SUPABASE_KEY = os.environ["SUPABASE_KEY"]
 GA4_PROPERTY_ID = os.environ["GA4_PROPERTY_ID"]
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS", "ga4-credentials.json")
+TOKEN_FILE = os.environ.get("GOOGLE_TOKEN_FILE", "token.json")
 
-DIMENSIONS = ["date", "pagePath", "landingPage", "sessionSourceMedium", "screenClass"]
+DIMENSIONS = ["date", "pagePath", "landingPage", "sessionSourceMedium"]
 METRICS = ["sessions", "totalUsers", "newUsers", "engagedSessions",
            "userEngagementDuration", "bounceRate", "screenPageViews"]
 
@@ -33,7 +35,6 @@ def build_records(rows: list) -> list:
             "page_path": dims[1],
             "landing_page": dims[2],
             "source_medium": dims[3],
-            "screen_class": dims[4],
             "sessions": int(mets[0]),
             "total_users": int(mets[1]),
             "new_users": int(mets[2]),
@@ -45,8 +46,17 @@ def build_records(rows: list) -> list:
     return records
 
 
+def _get_credentials() -> Credentials:
+    creds = Credentials.from_authorized_user_file(TOKEN_FILE)
+    if creds.expired and creds.refresh_token:
+        creds.refresh(Request())
+        with open(TOKEN_FILE, "w") as f:
+            f.write(creds.to_json())
+    return creds
+
+
 def _fetch(start_date: str, end_date: str) -> list:
-    client = BetaAnalyticsDataClient()
+    client = BetaAnalyticsDataClient(credentials=_get_credentials())
     request = RunReportRequest(
         property=f"properties/{GA4_PROPERTY_ID}",
         dimensions=[Dimension(name=d) for d in DIMENSIONS],
@@ -58,15 +68,18 @@ def _fetch(start_date: str, end_date: str) -> list:
     return response.rows
 
 
-def sync_range(start_date: str, end_date: str, supabase_client=None):
+def sync_range(start_date: str, end_date: str, supabase_client=None, chunk_size: int = 500):
     if supabase_client is None:
         supabase_client = create_client(SUPABASE_URL, SUPABASE_KEY)
     rows = _fetch(start_date, end_date)
     records = build_records(rows)
     if records:
-        conflict_cols = "date,page_path,source_medium,landing_page,screen_class"
-        supabase_client.table("ga4_page_metrics").upsert(records, on_conflict=conflict_cols).execute()
-    print(f"[ga4] {start_date} → {end_date}: {len(records)} rows")
+        conflict_cols = "date,page_path,source_medium,landing_page"
+        for i in range(0, len(records), chunk_size):
+            supabase_client.table("ga4_page_metrics").upsert(
+                records[i:i + chunk_size], on_conflict=conflict_cols
+            ).execute()
+    print(f"[ga4] {start_date} to {end_date}: {len(records)} rows")
 
 
 def run(backfill_months: int = 1):

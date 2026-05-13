@@ -5,7 +5,6 @@ CREATE TABLE IF NOT EXISTS ga4_page_metrics (
     page_path   TEXT    NOT NULL,
     landing_page TEXT   NOT NULL DEFAULT '',
     source_medium TEXT  NOT NULL DEFAULT '',
-    screen_class  TEXT  NOT NULL DEFAULT '',
     sessions              INTEGER DEFAULT 0,
     total_users           INTEGER DEFAULT 0,
     new_users             INTEGER DEFAULT 0,
@@ -13,7 +12,7 @@ CREATE TABLE IF NOT EXISTS ga4_page_metrics (
     avg_engagement_time_sec NUMERIC DEFAULT 0,
     bounce_rate           NUMERIC DEFAULT 0,
     screenpage_views      INTEGER DEFAULT 0,
-    UNIQUE (date, page_path, source_medium, landing_page, screen_class)
+    UNIQUE (date, page_path, source_medium, landing_page)
 );
 
 -- gsc_queries: Search Console query-level data
@@ -68,6 +67,19 @@ CREATE TABLE IF NOT EXISTS ms_countries (
     country_code TEXT NOT NULL,
     search_count INTEGER DEFAULT 0,
     UNIQUE (date, country_code)
+);
+
+-- fs_page_metrics: FullStory aggregated metrics per page (from UI CSV export)
+CREATE TABLE IF NOT EXISTS fs_page_metrics (
+    id              BIGSERIAL PRIMARY KEY,
+    date            DATE NOT NULL,
+    page_url        TEXT NOT NULL,
+    total_sessions  INTEGER DEFAULT 0,
+    avg_scroll_depth NUMERIC DEFAULT 0,
+    avg_active_time_sec NUMERIC DEFAULT 0,
+    rage_clicks     INTEGER DEFAULT 0,
+    dead_clicks     INTEGER DEFAULT 0,
+    UNIQUE (date, page_url)
 );
 
 -- Read-only role for AI query layer

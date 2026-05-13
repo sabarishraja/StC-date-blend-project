@@ -48,7 +48,7 @@ jobs:
       - run: pip install -r requirements.txt
       - name: Write GA4 credentials file
         run: echo '${{ secrets.GA4_CREDENTIALS_JSON }}' > ga4-credentials.json
-      - run: python sync/sync_ga4.py 1
+      - run: python sync/sync_ga4.py 3
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}

@@ -46,3 +46,28 @@ async function askQuestion() {
 document.getElementById("question").addEventListener("keydown", (e) => {
   if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) askQuestion();
 });
+
+async function loadInsights() {
+  const grid = document.getElementById("insights-grid");
+  const status = document.getElementById("insights-status");
+  try {
+    const resp = await fetch(`${API_URL}/insights`);
+    if (!resp.ok) throw new Error("Failed to load");
+    const data = await resp.json();
+    if (!data.insights || data.insights.length === 0) {
+      status.textContent = "No insights returned — check server logs or visit /debug/queries.";
+      return;
+    }
+    status.textContent = "";
+    grid.innerHTML = data.insights.map(i => `
+      <div class="insight-card ${i.type}">
+        <div class="insight-card-title">${i.title}</div>
+        <div class="insight-card-text">${i.insight}</div>
+      </div>
+    `).join("");
+  } catch (err) {
+    status.textContent = `Could not load insights: ${err.message}`;
+  }
+}
+
+loadInsights();

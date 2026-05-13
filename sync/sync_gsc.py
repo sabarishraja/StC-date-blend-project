@@ -2,7 +2,8 @@ import os
 import sys
 from datetime import date, timedelta
 from googleapiclient.discovery import build
-from google.oauth2 import service_account
+from google.oauth2.credentials import Credentials
+from google.auth.transport.requests import Request
 from supabase import create_client
 from dotenv import load_dotenv
 
@@ -10,9 +11,8 @@ load_dotenv()
 
 SUPABASE_URL = os.environ["SUPABASE_URL"]
 SUPABASE_KEY = os.environ["SUPABASE_KEY"]
-CREDENTIALS_FILE = os.environ["GOOGLE_APPLICATION_CREDENTIALS"]
-SCOPES = ["https://www.googleapis.com/auth/webmasters.readonly"]
-SITE_URL = os.environ.get("GSC_SITE_URL", "https://subjecttoclimate.org/")
+TOKEN_FILE = os.environ.get("GOOGLE_TOKEN_FILE", "token.json")
+SITE_URL = os.environ.get("GSC_SITE_URL", "sc-domain:subjecttoclimate.org")
 
 
 def build_query_records(sync_date: str, rows: list) -> list:
@@ -48,7 +48,11 @@ def build_page_records(sync_date: str, rows: list) -> list:
 
 
 def _get_service():
-    creds = service_account.Credentials.from_service_account_file(CREDENTIALS_FILE, scopes=SCOPES)
+    creds = Credentials.from_authorized_user_file(TOKEN_FILE)
+    if creds.expired and creds.refresh_token:
+        creds.refresh(Request())
+        with open(TOKEN_FILE, "w") as f:
+            f.write(creds.to_json())
     return build("searchconsole", "v1", credentials=creds)
 
 
@@ -84,7 +88,10 @@ def sync_day(target_date: date, supabase_client=None, service=None):
     query_rows = _fetch_all_rows(service, date_str, ["query", "page", "country", "device"])
     records = build_query_records(date_str, query_rows)
     if records:
-        supabase_client.table("gsc_queries").upsert(records, on_conflict="date,query,page,country,device").execute()
+        for i in range(0, len(records), 200):
+            supabase_client.table("gsc_queries").upsert(
+                records[i:i + 200], on_conflict="date,query,page,country,device"
+            ).execute()
 
     page_rows = _fetch_all_rows(service, date_str, ["page"])
     records = build_page_records(date_str, page_rows)
