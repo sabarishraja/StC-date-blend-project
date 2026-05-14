@@ -3,51 +3,92 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>StC Data Platform</title>
+  <title>StC Data Platform — Analytics Q&A</title>
+  <meta name="description" content="Ask plain-English questions about SubjectToClimate website analytics. Powered by GA4, Google Search Console, Meilisearch, and FullStory data.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="container">
-    <header>
-      <h1>StC Data Platform</h1>
-      <p class="subtitle">Ask a question about your analytics data</p>
+
+  <!-- ── Sidebar ─────────────────────────────────────────────── -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <span class="logo-icon">🌿</span>
+      <span class="logo-text">StC Data</span>
+    </div>
+
+    <div class="sidebar-section-label">Today's Insights</div>
+    <div id="insights-status" class="insights-loading-text">Loading…</div>
+    <div id="insights-list"></div>
+
+    <div class="sidebar-divider"></div>
+
+    <div class="sidebar-section-label">Example Questions</div>
+    <ul class="example-list" id="example-list">
+      <li onclick="injectQuestion(this)">Top content gaps — searches with no results?</li>
+      <li onclick="injectQuestion(this)">Which pages have high impressions but low clicks?</li>
+      <li onclick="injectQuestion(this)">Top searched terms also in Google Search Console?</li>
+      <li onclick="injectQuestion(this)">Which resources are evergreen over the last 90 days?</li>
+      <li onclick="injectQuestion(this)">Where do US visitors mostly land on the site?</li>
+      <li onclick="injectQuestion(this)">Which pages have the most rage clicks?</li>
+    </ul>
+
+    <div class="sidebar-divider"></div>
+
+    <button class="clear-btn" id="clear-btn" onclick="clearConversation()">
+      <span>↺</span> New Conversation
+    </button>
+  </aside>
+
+  <!-- ── Main ───────────────────────────────────────────────── -->
+  <main class="main">
+    <header class="topbar">
+      <div class="topbar-title">
+        <h1>Analytics Q&amp;A</h1>
+        <span class="topbar-sub">SubjectToClimate · Data Intelligence Platform</span>
+      </div>
+      <div class="topbar-sources">
+        <span class="source-pill ga4">GA4</span>
+        <span class="source-pill gsc">GSC</span>
+        <span class="source-pill ms">Meilisearch</span>
+        <span class="source-pill fs">FullStory</span>
+      </div>
     </header>
 
-    <div id="insights-section" class="insights-section">
-      <div class="insights-header">
-        <span class="insights-title">Today's Insights</span>
-        <span id="insights-status" class="insights-loading">Loading...</span>
+    <!-- Chat thread -->
+    <div class="chat-thread" id="chat-thread">
+      <div class="empty-state" id="empty-state">
+        <div class="empty-icon">💬</div>
+        <p class="empty-title">Ask anything about your analytics</p>
+        <p class="empty-sub">Type a question below or pick one from the sidebar. You can ask follow-up questions naturally — the conversation is remembered.</p>
       </div>
-      <div id="insights-grid" class="insights-grid"></div>
     </div>
 
-    <div class="input-area">
-      <textarea id="question" rows="3"
-        placeholder="e.g. What are our top content gaps? What do users search for with no results?"></textarea>
-      <button id="ask-btn" onclick="askQuestion()">Ask</button>
+    <!-- Thinking indicator (hidden until active) -->
+    <div class="thinking-bar hidden" id="thinking-bar">
+      <span class="thinking-dot"></span>
+      <span class="thinking-dot"></span>
+      <span class="thinking-dot"></span>
+      <span class="thinking-label">Querying data…</span>
     </div>
 
-    <div id="status" class="status hidden"></div>
-
-    <div id="result" class="result hidden">
-      <div id="answer" class="answer"></div>
-      <details class="sql-details">
-        <summary>View SQL</summary>
-        <pre id="sql-output"></pre>
-      </details>
+    <!-- Input bar -->
+    <div class="input-bar">
+      <textarea
+        id="question"
+        rows="1"
+        placeholder="Ask a question… (Ctrl+Enter to send)"
+        oninput="autoResize(this)"
+      ></textarea>
+      <button id="ask-btn" onclick="askQuestion()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+      </button>
     </div>
+    <p class="input-hint">Ctrl + Enter to send &nbsp;·&nbsp; Follow-up questions are remembered in this session</p>
+  </main>
 
-    <div class="examples">
-      <p>Example questions:</p>
-      <ul>
-        <li onclick="setQuestion(this)">What are our top content gaps — searches with no results?</li>
-        <li onclick="setQuestion(this)">Which pages have the highest organic impressions but lowest clicks?</li>
-        <li onclick="setQuestion(this)">What are the most searched terms that also appear in Google Search Console?</li>
-        <li onclick="setQuestion(this)">Which resources are evergreen — consistently popular over the last 90 days?</li>
-        <li onclick="setQuestion(this)">Where do users from the US mostly land on the site?</li>
-      </ul>
-    </div>
-  </div>
   <script src="app.js"></script>
 </body>
 </html>
