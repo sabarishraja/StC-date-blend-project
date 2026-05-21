@@ -29,13 +29,13 @@ jobs:
         with:
           python-version: "3.11"
       - run: pip install -r requirements.txt
-      - name: Write GA4 credentials file
-        run: echo '${{ secrets.GA4_CREDENTIALS_JSON }}' > ga4-credentials.json
+      - name: Write OAuth token file
+        run: echo '${{ secrets.GA4_TOKEN_JSON }}' > token.json
       - run: python sync/sync_gsc.py 1
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-          GOOGLE_APPLICATION_CREDENTIALS: ga4-credentials.json
+          GOOGLE_TOKEN_FILE: token.json
           GSC_SITE_URL: ${{ secrets.GSC_SITE_URL }}
 
   sync-ga4:
@@ -46,11 +46,11 @@ jobs:
         with:
           python-version: "3.11"
       - run: pip install -r requirements.txt
-      - name: Write GA4 credentials file
-        run: echo '${{ secrets.GA4_CREDENTIALS_JSON }}' > ga4-credentials.json
+      - name: Write OAuth token file
+        run: echo '${{ secrets.GA4_TOKEN_JSON }}' > token.json
       - run: python sync/sync_ga4.py 3
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
           GA4_PROPERTY_ID: ${{ secrets.GA4_PROPERTY_ID }}
-          GOOGLE_APPLICATION_CREDENTIALS: ga4-credentials.json
+          GOOGLE_TOKEN_FILE: token.json
