@@ -19,6 +19,9 @@ SUPABASE_KEY = os.environ["SUPABASE_KEY"]
 app = FastAPI()
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["GET", "POST"], allow_headers=["*"])
 
+from server.uploads import router as uploads_router  # noqa: E402
+app.include_router(uploads_router)
+
 anthropic_client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
 supabase_client = create_client(SUPABASE_URL, SUPABASE_KEY)
 

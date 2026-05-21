@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StC Data — Upload</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="upload-body">
+  <main class="upload-main">
+    <header class="upload-header">
+      <div>
+        <h1>Upload Data</h1>
+        <p class="upload-sub">Drop CSV exports from FullStory or Meilisearch to ingest them into the analytics database.</p>
+      </div>
+      <a class="back-link" href="index.html">← Back to Q&amp;A</a>
+    </header>
+
+    <section class="upload-card">
+      <h2>FullStory</h2>
+      <p class="upload-hint">One CSV per upload. Filename should include a date range like <code>2026-05-01_2026-05-31-fullstory.csv</code>. Loads into <code>fs_page_metrics</code>.</p>
+      <div class="dropzone" id="fs-dropzone">
+        <input type="file" id="fs-input" accept=".csv" hidden>
+        <p>Drop a FullStory CSV here, or <button type="button" class="link-btn" onclick="document.getElementById('fs-input').click()">browse</button></p>
+        <p class="dropzone-file" id="fs-file"></p>
+      </div>
+      <button class="primary-btn" id="fs-upload-btn" onclick="uploadFullstory()" disabled>Upload to Supabase</button>
+    </section>
+
+    <section class="upload-card">
+      <h2>Meilisearch</h2>
+      <p class="upload-hint">Up to 3 CSVs: <code>…-searched_queries.csv</code>, <code>…-searches_without_results.csv</code>, <code>…-countries_searches.csv</code>. Loads into <code>ms_top_searches</code>, <code>ms_no_results</code>, <code>ms_countries</code>.</p>
+      <div class="dropzone" id="ms-dropzone">
+        <input type="file" id="ms-input" accept=".csv" multiple hidden>
+        <p>Drop Meilisearch CSVs here, or <button type="button" class="link-btn" onclick="document.getElementById('ms-input').click()">browse</button></p>
+        <ul class="dropzone-files" id="ms-files"></ul>
+      </div>
+      <button class="primary-btn" id="ms-upload-btn" onclick="uploadMeilisearch()" disabled>Upload to Supabase</button>
+    </section>
+
+    <section class="upload-card" id="results-card" hidden>
+      <h2>Results</h2>
+      <ul class="results-list" id="results-list"></ul>
+    </section>
+  </main>
+
+  <script src="upload.js"></script>
+</body>
+</html>
