@@ -55,10 +55,16 @@ SQL_SYSTEM_PROMPT = f"""You are a SQL expert for a PostgreSQL database.
 {SCHEMA_DESCRIPTION}
 Rules:
 - Return ONLY the SQL query, nothing else. No markdown, no explanation.
-- Only write SELECT statements.
-- Always include a LIMIT (max 500 rows) unless doing an aggregation.
+- Only write SELECT statements. CTEs (WITH ... AS (...) SELECT ...) are also allowed.
+- Always include a LIMIT (max 100 rows) on EVERY query — including aggregated queries with ORDER BY. No exceptions.
 - Use LOWER() for case-insensitive text comparisons.
-- For date ranges, default to the last 90 days. Always calculate relative dates using the maximum date in the queried table (e.g., date >= (SELECT MAX(date) FROM target_table) - 90) instead of CURRENT_DATE.
+- DATE WINDOWS (strict, no exceptions):
+    * gsc_queries WITHOUT country filter: last 14 days  (date >= (SELECT MAX(date) FROM gsc_queries) - 14)
+    * gsc_queries WITH country filter:    last 7 days   (date >= (SELECT MAX(date) FROM gsc_queries) - 7)
+    * gsc_pages:                          last 30 days
+    * All other tables (ga4_page_metrics, ms_*, fs_page_metrics): last 90 days
+  Always anchor on MAX(date) from the queried table, never CURRENT_DATE.
+- For cross-source joins (e.g. ms_top_searches JOIN gsc_queries): always pre-aggregate each table in a CTE first (GROUP BY + SUM/COUNT with a date filter), then join the CTEs. Never join two raw tables row-by-row.
 
 Performance rules — CRITICAL, always follow these to avoid query timeouts:
 1. TRAFFIC CHANNEL QUESTIONS: To answer how users found a page (search vs direct vs referral vs social),
@@ -81,6 +87,27 @@ Performance rules — CRITICAL, always follow these to avoid query timeouts:
      SELECT ... FROM ga4 LEFT JOIN gsc ON ...
 3. DATE FILTER FIRST: Apply the date WHERE clause inside every CTE or subquery — never filter after a join.
 4. AVOID large row-level joins: Never do FROM ga4_page_metrics JOIN gsc_queries without a CTE wrapping both sides first.
+5. PAGE-LEVEL GSC METRICS: For any question about page impressions / clicks / CTR / position at the page level
+   (not query/keyword level), ALWAYS use gsc_pages — it is pre-aggregated by (date, page) and small/fast.
+   Never use gsc_queries for page-level metrics. Only use gsc_queries when the question is specifically about
+   search keywords, queries, or query-country/device breakdowns.
+6. GSC_QUERIES SIZE: gsc_queries is very large. Whenever you must query it, restrict date to the LAST 14 DAYS
+   maximum (use - 14), ALWAYS aggregate (SUM/COUNT with GROUP BY), and ALWAYS include LIMIT 100.
+   If filtering by country, additionally narrow to 7 days (use - 7) to keep the scan small.
+   Never SELECT raw rows from gsc_queries without aggregation.
+7. GROUP BY CORRECTNESS: When a SELECT uses an aggregate (SUM/COUNT/AVG/MAX/MIN), every non-aggregate
+   expression in SELECT MUST appear in the GROUP BY clause. No exceptions.
+8. GEOGRAPHY / COUNTRY QUESTIONS: ga4_page_metrics has NO country column. Geographic data exists ONLY in:
+     - gsc_queries.country (3-letter lowercase ISO code, e.g. 'usa', 'gbr', 'can') — search visibility by country
+     - ms_countries.country_code — on-site search counts by country
+   For "where do US visitors land" type questions, use gsc_queries filtered to country='usa', aggregated by page,
+   with the strict 7-day date window (see DATE WINDOWS above), to show the pages US users most often land on via Google search.
+9. EVERGREEN CONTENT: "Evergreen" means pages with consistent sessions over a long window.
+   Define it as: pages from ga4_page_metrics where SUM(sessions) is high AND the page received traffic on
+   at least 30 distinct days within the window. Use COUNT(DISTINCT date) >= 30 in a HAVING clause.
+10. CROSS-SOURCE SEARCH-TERM JOINS (Meilisearch ↔ GSC): Pre-aggregate ms_top_searches by LOWER(query_term)
+    in one CTE (last 30 days), pre-aggregate gsc_queries by LOWER(query) in another CTE (last 30 days,
+    SUM impressions and clicks), then INNER JOIN on the lowercased terms. Always LIMIT the result.
 """
 
 ANSWER_SYSTEM_PROMPT = f"""You are a helpful data analyst for SubjectToClimate, an educational nonprofit.
@@ -159,7 +186,8 @@ def is_safe_sql(sql: str) -> bool:
     stripped = sql.strip().lower()
     if not stripped:
         return False
-    return stripped.startswith("select")
+    # Allow plain SELECT and CTEs (WITH ... AS (...) SELECT ...)
+    return stripped.startswith("select") or stripped.startswith("with")
 
 
 class HistoryMessage(BaseModel):
@@ -228,6 +256,7 @@ def ask(req: QuestionRequest):
         result = supabase_client.rpc("execute_query", {"sql_query": sql}).execute()
         rows = result.data or []
     except Exception as e:
+        logging.error("[ask] SQL failed: %s\nSQL was:\n%s", e, sql)
         raise HTTPException(status_code=500, detail=f"Query execution failed: {str(e)}")
 
     # Build answer history: include prior exchanges so the analyst answer is coherent

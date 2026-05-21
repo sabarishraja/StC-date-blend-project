@@ -103,7 +103,8 @@ AS $$
 DECLARE
     result json;
 BEGIN
-    IF NOT (lower(trim(sql_query)) LIKE 'select%') THEN
+    -- Allow plain SELECT and CTEs (WITH ... AS (...) SELECT ...)
+    IF NOT (lower(trim(sql_query)) LIKE 'select%' OR lower(trim(sql_query)) LIKE 'with%') THEN
         RAISE EXCEPTION 'Only SELECT queries are allowed';
     END IF;
     EXECUTE 'SELECT json_agg(t) FROM (' || sql_query || ') t' INTO result;
