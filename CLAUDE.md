@@ -25,7 +25,7 @@
 - No untracked files related to project setup
 
 ### Project Context
-- Working directory: `c:\Users\sabar\Downloads\Stc data blending V2`
+- Working directory: `/path/to/Stc data blending V2`
 - Fresh project with existing:
   - `.env` file (Supabase, Meilisearch, GA4, Anthropic credentials)
   - `ga4-credentials.json` (Google service account)

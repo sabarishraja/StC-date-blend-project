@@ -1,0 +1,133 @@
+<html xmlns:o="urn:schemas-microsoft-com:office:office"
+      xmlns:w="urn:schemas-microsoft-com:office:word"
+      xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+<meta charset="utf-8">
+<title>KT Document</title>
+<style>
+body { font-family: Calibri, sans-serif; }
+table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
+th, td { border: 1px solid black; padding: 8px; text-align: left; }
+th { background-color: #f2f2f2; }
+pre { background-color: #f4f4f4; padding: 10px; }
+code { font-family: Consolas, monospace; }
+</style>
+</head>
+<body>
+<h1>SubjectToClimate — Data Intelligence Platform: Knowledge Transfer</h1>
+<p><b>Project:</b> StC Data Blending V2<br>
+<b>Status:</b> Operational<br>
+<b>Last Updated:</b> May 2026</p>
+<p>This document serves as a complete handover and knowledge transfer guide for the StC Data Blending V2 project. It is structured into two main sections tailored for both non-technical stakeholders and the engineering team taking ownership of the system.</p>
+<hr>
+<h2>Section 1: For Non-Technical Members</h2>
+<h3>What is this project?</h3>
+<p>We built an internal Data Intelligence system that allows anyone on the team to ask plain-English questions about SubjectToClimate's website performance and get instant answers. There is no need to learn Google Analytics, Search Console, Fullstory, or any complex dashboard.</p>
+<h3>What can you ask it?</h3>
+<p>You can type a question just like you would to a colleague. For example:</p>
+<ul>
+<li><i>"What were the top 5 pages by sessions last month?"</i></li>
+<li><i>"Which Google search queries drove the most clicks to our site this week?"</i></li>
+<li><i>"Which pages have the most rage clicks or dead clicks?"</i></li>
+<li><i>"Which countries are our visitors coming from?"</i></li>
+<li><i>"Which pages have the highest bounce rate?"</i></li>
+</ul>
+<p>The system understands the question, pulls the relevant data, and gives you a written summary of the answer.</p>
+<h3>Where does the data come from?</h3>
+<p>Four primary sources are connected to the platform:</p>
+<table>
+<tr><th>Data Source</th><th>What it tells us</th></tr>
+<tr><td><b>Google Analytics 4 (GA4)</b></td><td>Website usage: page visits, session length, bounce rate, traffic sources.</td></tr>
+<tr><td><b>Google Search Console (GSC)</b></td><td>Google search performance: what people searched for, clicks, ranking pages.</td></tr>
+<tr><td><b>Meilisearch</b></td><td>On-site search behavior: top search terms, failed searches, user countries.</td></tr>
+<tr><td><b>Fullstory</b></td><td>User experience & behavior: average scroll depth, active time, rage clicks, dead clicks.</td></tr>
+</table>
+<p><b>Data History:</b></p>
+<ul>
+<li><b>GA4:</b> 12 months of data</li>
+<li><b>Google Search Console:</b> 16 months of data</li>
+<li><b>Meilisearch:</b> 30 days of data (platform limitation — 90 days requires an enterprise plan)</li>
+<li><b>Fullstory:</b> Dependent on manual CSV exports</li>
+</ul>
+<h3>How do you use it?</h3>
+<ol>
+<li>An engineer starts the system by running a single command.</li>
+<li>Open the <code>app/index.html</code> file in any web browser.</li>
+<li>Type your question into the chat interface and click <b>Ask</b>.</li>
+<li>Receive your data-backed answer in seconds.</li>
+</ol>
+<h3>How is data updated?</h3>
+<p>A scheduled job runs every morning at 6:00 AM UTC and pulls the previous day's data from GA4 and GSC into the database. The system always stays current without manual intervention for these sources.</p>
+<h3>Current Limitations</h3>
+<ul>
+<li><b>Meilisearch & Fullstory Analytics:</b> Both require a manual CSV export from their respective dashboards, which is then loaded into the platform manually.</li>
+<li>The system answers questions about data we currently track — it cannot predict future trends or access external platforms not connected to the database.</li>
+</ul>
+<hr>
+<h2>Section 2: For Technical Members</h2>
+<h3>Architecture Overview</h3>
+<p>Data flows from GA4, GSC, Meilisearch CSVs, and Fullstory CSVs via Python Sync Scripts into a Supabase PostgreSQL database. A FastAPI backend connects to the database and integrates with Anthropic Claude Haiku AI to process plain-English queries, convert them to SQL, and generate natural language responses. The UI is a static HTML frontend.</p>
+<h3>Tech Stack</h3>
+<ul>
+<li><b>Database:</b> Supabase (PostgreSQL)</li>
+<li><b>Sync Scripts:</b> Python 3.11</li>
+<li><b>Google Auth:</b> OAuth2 with refresh token (<code>token.json</code>)</li>
+<li><b>AI Query Layer:</b> FastAPI + Anthropic Claude Haiku (<code>claude-haiku-4-5-20251001</code>)</li>
+<li><b>Frontend:</b> Static HTML/CSS/Vanilla JS (<code>app/index.html</code>)</li>
+<li><b>Scheduler:</b> GitHub Actions cron (<code>.github/workflows/</code>)</li>
+</ul>
+<h3>Repository Structure</h3>
+<pre>
+.
+├── sync/
+│   ├── sync_ga4.py              # Pulls GA4 page metrics → Supabase
+│   ├── sync_gsc.py              # Pulls GSC search data → Supabase
+│   ├── load_meilisearch_csv.py  # Loads manually exported Meilisearch CSVs
+│   └── load_fullstory_csv.py    # Loads manually exported Fullstory CSVs
+├── server/
+│   └── query_engine.py          # FastAPI app: question → SQL → answer
+├── app/
+│   ├── index.html               # Web UI
+│   ├── style.css
+│   └── app.js                   # Calls POST /ask on localhost:8001
+├── db/
+│   └── schema.sql               # All table definitions + execute_query RPC
+├── Meilisearch-csv/             # Drop exported Meilisearch CSVs here
+├── Fullstory-csv/               # Drop exported Fullstory CSVs here
+├── token.json                   # OAuth2 token (gitignored)
+├── oauth-credentials.json       # OAuth2 client secrets (gitignored)
+└── .env                         # All credentials (gitignored)
+</pre>
+<h3>AI Query Layer — How It Works</h3>
+<p>The <code>server/query_engine.py</code> script exposes a single endpoint: <code>POST /ask</code>.</p>
+<ol>
+<li>The endpoint receives <code>{ "question": "..." }</code>.</li>
+<li>Sends the question to <b>Claude Haiku</b> with a system prompt containing the full Supabase database schema. The AI generates a PostgreSQL <code>SELECT</code> statement.</li>
+<li>The server strips markdown fences and executes the SQL via Supabase's <code>execute_query</code> RPC function (read-only, SELECT only).</li>
+<li>Sends the original question and the raw database rows back to Claude Haiku, which generates a plain-English response.</li>
+<li>Returns <code>{ "answer": "...", "sql": "...", "row_count": N }</code> to the frontend.</li>
+</ol>
+<h3>Running Locally</h3>
+<ol>
+<li>Start the API server:
+<pre>uvicorn server.query_engine:app --port 8001</pre>
+</li>
+<li>Open the UI by launching <code>app/index.html</code> in your web browser.</li>
+</ol>
+<h3>Authentication &amp; Secrets</h3>
+<ul>
+<li><b>Google API:</b> Service accounts were not used. Authentication uses OAuth2 with a stored refresh token. If <code>token.json</code> is lost or revoked, run <code>python auth_setup.py</code> to re-authenticate with a Google account that has Owner access to GSC and GA4.</li>
+<li><b>Supabase Row Level Security (RLS):</b> RLS must be disabled on all tables (<code>ga4_page_metrics</code>, <code>gsc_queries</code>, <code>gsc_pages</code>, <code>ms_top_searches</code>, <code>ms_no_results</code>, <code>ms_countries</code>, <code>fs_page_metrics</code>) for the sync scripts to write via the anon key.</li>
+</ul>
+<h3>Taking it Forward (Next Steps)</h3>
+<p>As I transition out of this project, here are the recommended next steps to scale and improve the system:</p>
+<ol>
+<li><b>Automate CSV Syncing (Meilisearch & Fullstory):</b> Write automation scripts to interact with the Meilisearch API (if upgraded to Enterprise) and FullStory API. This will eliminate the need for manual CSV exports and loads.</li>
+<li><b>Deploy the Web UI &amp; API:</b> Currently, the application is run locally. The next phase should involve deploying the FastAPI backend to a service like Render, Railway, or AWS, and hosting the static frontend on Vercel or Netlify. This will allow the entire team to access the tool without needing a local development environment.</li>
+<li><b>Expand Data Sources:</b> The AI handles SQL generation based on the provided schema. By simply adding more tables to the Supabase database and updating the AI's system prompt schema, you can easily integrate data from CRMs (HubSpot/Salesforce) or marketing platforms without altering the core AI logic.</li>
+<li><b>Enhanced Charting &amp; Visuals:</b> The frontend currently provides written summaries. A great addition would be hooking up a charting library (like Chart.js or Recharts) and prompting Claude to also return a JSON configuration for charts alongside the SQL, enabling visual graphs for the users.</li>
+<li><b>Security &amp; Access Control:</b> Before exposing the web interface company-wide, implement basic authentication (e.g., standard login or Google SSO) on the frontend to ensure that sensitive metrics are kept secure.</li>
+</ol>
+<p><i>End of Document</i></p>
+</body>
+</html>

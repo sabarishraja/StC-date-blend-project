@@ -2,7 +2,7 @@
 
 **Date:** 2026-05-20
 **Status:** Approved, ready for implementation
-**Author:** Sabarinath R. (with Claude)
+**Author:** Engineering Team
 
 ## Problem
 
